@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101318">
+  <title>Vita3K Web — Player</title>
+  <link rel="stylesheet" href="./player.css">
+  <script src="./coi.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="Vita3K Web home"><span class="brand-mark">V</span> Vita3K <span class="brand-web">WEB</span></a>
+    <span class="header-note">Your Vita, in the browser.</span>
+  </header>
+  <main>
+    <div class="game-heading">
+      <div><p class="eyebrow">PLAYSTATION VITA</p><h1 id="game-title">Limbo</h1></div>
+      <div class="session-status"><span class="status-dot"></span><span id="status" role="status">Ready to play</span><span id="fps">— FPS</span></div>
+    </div>
+    <section id="player-shell" aria-label="Game player">
+      <div class="toolbar" aria-label="Player controls">
+        <div class="toolbar-group">
+          <button id="run" class="primary" disabled>Play</button>
+          <button id="stop" disabled>Stop</button>
+        </div>
+        <div class="toolbar-group">
+          <button id="mute" aria-pressed="false" aria-label="Mute sound">Sound on</button>
+          <button id="touch-toggle" aria-pressed="false" aria-controls="touch-controls">Touch</button>
+          <button id="fullscreen" aria-label="Enter fullscreen">Fullscreen</button>
+        </div>
+      </div>
+      <div id="display" tabindex="-1" aria-label="Vita game screen">
+        <canvas id="gpu-screen" width="960" height="544" aria-label="Game video"></canvas>
+        <canvas id="screen" width="960" height="544" hidden aria-label="Game video"></canvas>
+        <div id="welcome"><span class="welcome-symbol">▷</span><h2>Ready when you are.</h2><p>Press Play to launch the game.</p>
+          <div id="launch-status" hidden>
+            <p id="launch-phase"></p>
+            <div id="launch-bar" hidden><span id="launch-fill"></span></div>
+            <p id="launch-detail"></p>
+          </div>
+        </div>
+        <div id="touch-controls" hidden aria-label="Vita touch controller">
+          <button class="pad-button shoulder shoulder-left" data-button="l" aria-label="L shoulder">L</button>
+          <button class="pad-button shoulder shoulder-right" data-button="r" aria-label="R shoulder">R</button>
+          <div class="dpad" data-dpad aria-label="Directional pad">
+            <button class="pad-button north" data-direction="up" aria-label="D-pad up">▲</button>
+            <button class="pad-button west" data-direction="left" aria-label="D-pad left">◀</button>
+            <button class="pad-button east" data-direction="right" aria-label="D-pad right">▶</button>
+            <button class="pad-button south" data-direction="down" aria-label="D-pad down">▼</button>
+          </div>
+          <div class="face-buttons">
+            <button class="pad-button north triangle" data-button="triangle" aria-label="Triangle">△</button>
+            <button class="pad-button west square" data-button="square" aria-label="Square">□</button>
+            <button class="pad-button east circle" data-button="circle" aria-label="Circle">○</button>
+            <button class="pad-button south cross" data-button="cross" aria-label="Cross">×</button>
+          </div>
+          <div class="stick stick-left" data-stick="0" role="group" aria-label="Left analog stick"><span class="stick-thumb">L</span></div>
+          <div class="stick stick-right" data-stick="2" role="group" aria-label="Right analog stick"><span class="stick-thumb">R</span></div>
+          <div class="system-buttons">
+            <button class="pad-button" data-button="select" aria-label="Select">SELECT</button>
+            <button class="pad-button" data-button="start" aria-label="Start">START</button>
+          </div>
+        </div>
+        <div id="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-message" hidden>
+          <p id="dialog-message"></p><progress id="dialog-progress" max="100" hidden></progress>
+          <div id="dialog-buttons"></div><small id="dialog-hint"></small>
+        </div>
+        <form id="ime" role="dialog" aria-modal="true" aria-label="Game keyboard" hidden>
+          <input id="ime-text" aria-label="Game text input" autocomplete="off" spellcheck="false">
+          <button id="ime-enter" type="submit">Enter</button><button id="ime-close" type="button">Close</button>
+          <small id="ime-hint">Enter to confirm · Esc to close</small>
+        </form>
+      </div>
+      <p id="player-notice" role="status" hidden></p>
+    </section>
+    <div class="below-player"><p class="play-hint">Press <kbd>Enter</kbd> or tap <strong>START</strong> at the title screen.</p><label class="title-picker" id="title-row">Title <select id="title-picker" disabled><option>Loading games…</option></select></label><span class="package-upload" id="upload-row">Game (.zip/.vpk/.pkg) <button id="upload" type="button">Upload</button><input id="upload-file" type="file" accept=".zip,.vpk,.pkg,application/zip" hidden></span><span class="package-upload" id="firmware-row">Firmware (.PUP, or .zip of os0 + vs0) <button id="upload-firmware" type="button">Upload</button> <span id="firmware-state"></span><input id="firmware-file" type="file" accept=".pup,.PUP,.zip,application/zip" hidden></span><span class="save-export">Saves <button id="download-saves" type="button">Download</button><button id="upload-saves" type="button">Upload</button><input id="saves-file" type="file" accept=".zip,application/zip" hidden></span><span class="rotate-hint">Rotate your phone for a wider view.</span></div>
+    <div id="warning" role="alert"></div>
+    <details id="control-settings" class="panel">
+      <summary>Controls &amp; preferences</summary>
+      <div class="preferences">
+        <label>Touch controls <select id="touch-mode"><option value="auto">Automatic</option><option value="on">Always show</option><option value="off">Hidden</option></select></label>
+        <label>Button opacity <input id="touch-opacity" type="range" min="25" max="100" value="65"></label>
+        <label>Button size <input id="touch-size" type="range" min="80" max="120" value="100"></label>
+      </div>
+      <p class="control-note">Hold multiple buttons at once. Drag either stick to move; slide across the D-pad for diagonals.</p>
+      <div id="keys" class="key-guide">
+        <span><kbd>↑ ↓ ← →</kbd> D-pad + left stick</span><span><kbd>X</kbd> Cross <kbd>C</kbd> Circle</span>
+        <span><kbd>Z</kbd> Square <kbd>V</kbd> Triangle</span><span><kbd>Q / E</kbd> L / R</span>
+        <span><kbd>Enter</kbd> Start <kbd>Right Shift</kbd> Select</span><span><kbd>I J K L</kbd> Right stick</span>
+        <span>Gamepad: <kbd>A B X Y</kbd> Cross Circle Square Triangle (by position) · bumpers or triggers L / R · <kbd>Start</kbd> <kbd>Back</kbd> Start / Select · sticks and D-pad</span>
+      </div>
+    </details>
+    <details id="diagnostics" class="panel">
+      <summary>Debug <span>Runtime information &amp; logs</span></summary>
+      <div class="diagnostic-toolbar"><span id="runtime-info"></span><button id="beep">Test sound</button></div>
+      <p id="stats"></p><pre id="log" aria-label="Runtime log"></pre>
+    </details>
+    <footer>Vita3K Web <span>Experimental browser port</span></footer>
+  </main>
+  <script type="module" src="./player.js"></script>
+</body>
+</html>

@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#FFFFF2">
+  <meta name="description" content="Vita3K web port — light, fast, honest. Plays PS Vita games in your browser.">
+  <title>Vita3K</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23FFFFF2'/%3E%3Crect x='4' y='11' width='24' height='10' rx='5' fill='%23191919'/%3E%3Ccircle cx='10' cy='16' r='2' fill='%23FFFFF2'/%3E%3Ccircle cx='22' cy='16' r='2' fill='%23FFFFF2'/%3E%3C/svg%3E">
+  <!-- Cross-origin isolation for the threaded runtime: before anything else. -->
+  <script src="./coi.js"></script>
+  <link rel="stylesheet" href="./shell.css">
+  <script type="module" src="./shell.js"></script>
+</head>
+<body>
+  <div id="app">
+
+    <header id="mast">
+      <div class="wordmark" aria-label="Vita3K">VITA3K</div>
+      <div class="mast-right">
+        <span id="fps" hidden></span>
+        <span id="status" role="status">loading…</span>
+      </div>
+    </header>
+
+    <main id="stage">
+      <div id="screen-frame">
+        <div id="screen-area">
+          <!-- a fresh canvas is injected here for every run -->
+          <canvas id="gpu-screen" width="960" height="544" aria-label="Game video" hidden></canvas>
+          <canvas id="screen" width="960" height="544" aria-label="Game video" hidden></canvas>
+
+          <div id="welcome">
+            <p class="w-mark" aria-hidden="true">▷</p>
+            <h2 id="w-title">Ready when you are.</h2>
+            <p id="w-sub">Press Play to launch the game.</p>
+            <div id="launch" hidden>
+              <p id="launch-phase"></p>
+              <div id="launch-bar" hidden><span id="launch-fill"></span></div>
+              <p id="launch-detail"></p>
+            </div>
+          </div>
+
+          <div id="touch-controls" hidden aria-label="Vita touch controller">
+            <div class="tc-row tc-top">
+              <button class="pad-button shoulder shoulder-left" data-button="l" aria-label="L shoulder">L</button>
+              <span class="tc-spacer"></span>
+              <button class="pad-button shoulder shoulder-right" data-button="r" aria-label="R shoulder">R</button>
+            </div>
+            <div class="tc-row tc-mid">
+              <div class="pad-stick" data-stick="0" aria-label="Left analog stick"><span></span></div>
+              <span class="tc-spacer"></span>
+              <div class="pad-stick" data-stick="1" aria-label="Right analog stick"><span></span></div>
+            </div>
+            <div class="tc-row tc-bottom">
+              <div class="dpad">
+                <button class="pad-button north" data-direction="up" aria-label="D-pad up">▲</button>
+                <button class="pad-button west" data-direction="left" aria-label="D-pad left">◀</button>
+                <button class="pad-button east" data-direction="right" aria-label="D-pad right">▶</button>
+                <button class="pad-button south" data-direction="down" aria-label="D-pad down">▼</button>
+              </div>
+              <span class="tc-spacer"></span>
+              <div class="face-buttons">
+                <button class="pad-button north triangle" data-button="triangle" aria-label="Triangle">△</button>
+                <button class="pad-button west square" data-button="square" aria-label="Square">□</button>
+                <button class="pad-button east circle" data-button="circle" aria-label="Circle">○</button>
+                <button class="pad-button south cross" data-button="cross" aria-label="Cross">×</button>
+              </div>
+            </div>
+            <div class="tc-row tc-system">
+              <button class="pad-button system" data-button="select" aria-label="Select">SELECT</button>
+              <span class="tc-spacer"></span>
+              <button class="pad-button system" data-button="start" aria-label="Start">START</button>
+            </div>
+          </div>
+
+          <div id="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-message" hidden>
+            <p id="dialog-message"></p>
+            <progress id="dialog-progress" max="100" hidden></progress>
+            <div id="dialog-buttons"></div>
+            <small id="dialog-hint"></small>
+          </div>
+
+          <form id="ime" role="dialog" aria-modal="true" aria-label="Game keyboard" hidden>
+            <input id="ime-text" aria-label="Game text input" autocomplete="off" spellcheck="false">
+            <div class="ime-actions">
+              <button id="ime-enter" type="submit">Enter</button>
+              <button id="ime-close" type="button">Close</button>
+            </div>
+            <small id="ime-hint">Enter to confirm · Esc to close</small>
+          </form>
+        </div>
+      </div>
+      <p id="player-notice" role="status" hidden></p>
+    </main>
+
+    <nav id="transport" aria-label="Player controls">
+      <button id="run" class="primary" disabled>Play</button>
+      <button id="stop" disabled>Stop</button>
+      <button id="mute" aria-pressed="false" aria-label="Mute sound">Sound on</button>
+      <button id="touch-toggle" aria-pressed="false" aria-controls="touch-controls">Touch</button>
+      <label id="touch-mode-label">Touch mode
+        <select id="touch-mode" aria-label="Touch controls mode">
+          <option value="auto">Automatic</option>
+          <option value="on">Always show</option>
+          <option value="off">Hidden</option>
+        </select>
+      </label>
+      <button id="fullscreen" aria-label="Enter fullscreen">Fullscreen</button>
+      <span id="notice" role="status"></span>
+    </nav>
+
+    <section id="library" aria-label="Library">
+      <div id="chips" aria-label="Installed games"></div>
+      <div id="lib-actions">
+        <span class="fup">Game
+          <button id="upload" type="button">Upload</button>
+          <input id="upload-file" type="file" accept=".zip,.vpk,.pkg,application/zip" hidden>
+        </span>
+        <span class="fup">Firmware
+          <button id="up-firmware" type="button">Upload</button>
+          <input id="firmware-file" type="file" accept=".pup,.PUP,.zip,application/zip" hidden>
+        </span>
+        <span class="fup">Saves
+          <button id="saves-download" type="button">Download</button>
+          <button id="saves-upload" type="button">Upload</button>
+          <input id="saves-file" type="file" accept=".zip,application/zip" hidden>
+        </span>
+        <span id="storage-state"></span>
+      </div>
+      <p id="firmware-state"></p>
+    </section>
+
+    <section id="wall" hidden role="alert">
+      <h2>This game needs functions this emulator build does not implement</h2>
+      <p>The log shows <code>Unimplemented sprintf / vsprintf / strcmp / memcmp / strstr / strchr</code>.
+        These SceLibc functions are stubs in the current WebAssembly build, so some games
+        (5pb / CRI Middleware titles such as Steins;Gate are typical) build file paths with them,
+        get an empty path back and stop on their own — often as <code>*** system break ***</code>
+        or <code>File Pak Load Error</code>.</p>
+      <p>Nothing in the page can fix that — the fix is a rebuilt runtime. The repository ships an
+        <strong>unlock kit</strong>: a small source patch plus a GitHub Actions workflow that builds a
+        runtime with those functions implemented. See the README (<em>SceLibc unlock kit</em>).</p>
+      <button id="wall-dismiss" type="button">Dismiss</button>
+    </section>
+
+    <details id="logbox">
+      <summary>Log</summary>
+      <pre id="log" aria-live="polite"></pre>
+    </details>
+
+    <footer id="foot">
+      <span>engine: notwindstone web port · Memory64 JIT · WebGPU · OPFS</span>
+      <span id="cap-note"></span>
+    </footer>
+
+  </div>
+</body>
+</html>
